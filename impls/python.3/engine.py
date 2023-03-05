@@ -33,6 +33,8 @@ def reduce(ast: MalExpression, env: Env) -> MalExpression:
     # Now that ast is a reducible MalList
     if len(ast.naive()) == 0:
         return ast
+
+    # switch ast[0]
     if str(ast[0]) == 'def!':
         if not isinstance(ast[1], MalSymbol):
             raise Exception(
@@ -54,12 +56,10 @@ def reduce(ast: MalExpression, env: Env) -> MalExpression:
             if not isinstance(k, MalSymbol):
                 raise Exception("Values must be bind to an symbol.")
             new_env.set(k, reduce(v, new_env))
-        return reduce(ast[2], new_env)
+        return reduce(ast[2], new_env)  # TODO: TCO
     elif str(ast[0]) == 'do':
-        # TODO: optimize unnecessary calculation
-        for v in ast[1:-1]:
-            _ = reduce(v, env)
-        return reduce(ast[-1], env)
+        # Perform calculation and return the last
+        return flatten(MalList(ast.naive()[1:]), env).naive()[-1]
     elif str(ast[0]) == 'if':
         cond = reduce(ast[1], env)
         # False section
@@ -68,9 +68,9 @@ def reduce(ast: MalExpression, env: Env) -> MalExpression:
             if len(ast.naive()) == 3:
                 return MalNil()
             # Else, evaluate it
-            return reduce(ast[3], env)
+            return reduce(ast[3], env)  # TODO: TCO
         else:
-            return reduce(ast[2], env)
+            return reduce(ast[2], env)  # TODO: TCO
     elif str(ast[0]) == 'fn*':
         def func(
             exprs: Optional[List[MalExpression]]
@@ -82,4 +82,4 @@ def reduce(ast: MalExpression, env: Env) -> MalExpression:
     else:
         eval_list = flatten(ast, env)
         head, tail = eval_list[0], eval_list[1:]
-        return head.call(tail)
+        return head.call(tail)  # TODO: TCO

@@ -7,10 +7,11 @@ from engine import reduce
 
 import os
 import readline
+from pathlib import Path
 
 readline.parse_and_bind('tab: complete')
 readline.parse_and_bind('set editing-mode vi')
-repl_path = os.path.dirname(os.path.realpath(__file__))
+repl_path = Path(os.path.dirname(os.path.realpath(__file__)))
 
 
 # trivial functions
@@ -25,7 +26,7 @@ def main():
     env = get_core_env()
 
     try:
-        with open(f"{repl_path}/core.mal", "r") as f:
+        with open(repl_path / Path('core.mal'), 'r') as f:
             lines = f.readlines()
             # Load core.mal
             for line in lines:
