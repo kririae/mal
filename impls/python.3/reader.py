@@ -33,16 +33,33 @@ def read_str(s: str):
 
 
 def read_form(reader: Reader) -> MalExpression:
+    specials = {
+        '\'': 'quote',
+        '`': 'quasiquote',
+        '~': 'unquote',
+        '~@': 'splice-unquote',
+        '@': 'deref'
+    }
+
     try:
         s = reader.peek()
         if not s:
             return MalEOF()
-        elif s[0] == '(':
+        elif s == ';':
+            return MalEOF()
+        elif s == '(':
             _ = reader.next()
             return read_list(reader)
-        elif s[0] == '[':
+        elif s == '[':
             _ = reader.next()
             return read_vector(reader)
+        elif s == '{':
+            _ = reader.next()
+            return read_hashmap(reader)
+        elif s in specials.keys():
+            _ = reader.next()
+            element = read_form(reader)
+            return MalList([MalSymbol(specials[s]), element])
         else:
             return read_atom(reader)
     except Exception as e:
@@ -59,7 +76,7 @@ def read_list(reader: Reader) -> MalList:
             break
         e = read_form(reader)
         if isinstance(e, MalEOF):
-            raise Exception("List brakcet not closed")
+            raise Exception("list bracket not closed")
         lst.append(e)
     return lst
 
@@ -72,8 +89,22 @@ def read_vector(reader: Reader) -> MalVector:
             _ = reader.next()
             break
         e = read_form(reader)
-        if type(e) == MalEOF:
-            raise Exception("Vector brakcet not closed")
+        if isinstance(e, MalEOF):
+            raise Exception("vector bracket not closed")
+        vec.append(e)
+    return vec
+
+
+def read_hashmap(reader: Reader) -> MalHashmap:
+    vec = MalHashmap()
+    while True:
+        s = reader.peek()
+        if s == '}':
+            _ = reader.next()
+            break
+        e = read_form(reader)
+        if isinstance(e, MalEOF):
+            raise Exception("hashmap bracket not closed")
         vec.append(e)
     return vec
 
@@ -82,10 +113,12 @@ def read_atom(reader: Reader) -> MalExpression:
     s = reader.next()
     if check_int(s):
         return MalInteger(int(s))
-    elif s[0] == '\'' or s[0] == '\"':
+    elif s[0] == '\"':
         return string_parser(s)
     elif s[0] == ')':
         raise Exception("Unexpected bracket")
+    elif s[0] == ':':
+        return MalKeyword(s)
     else:
         return MalSymbol(s)
 
@@ -97,27 +130,29 @@ def check_int(s: str) -> bool:
 
 
 def string_parser(s: str) -> MalString:
-    if s[0] != '\'' and s[0] != '\"':
+    if s[0] != '\"':
         raise Exception("Invalid string")
     if len(s) < 2 or s[-1] != s[0]:
         raise Exception("String bracket not closed")
     s = s[1:-1]  # clamp string
     s_, idx = [], 0
+
+    # Must iteratively parse the sequence
     while idx < len(s):
         c = s[idx]
         if c == '\\':
-            if idx+1 >= len(s):
-                raise Exception("Invalid backslash in string")
-            s_.append(s[idx+1] if s[idx+1] != 'n' else '\n')
+            if idx + 1 >= len(s):
+                raise Exception("Error parsing string")
+            next_c = s[idx+1]
+            s_.append('\n' if next_c == 'n' else next_c)
             idx += 2
-            continue
-        elif c == '\"':
-            raise Exception("Invalid string bracket in string")
         else:
             s_.append(c)
-        idx += 1
+            idx += 1
     return MalString(''.join(s_))
 
 
 if __name__ == '__main__':
-    print(read_str(r'''(+ 1 (+ -2 3))'''))
+    print(tokenize(r'''
+       ; "qwq"
+    '''))
