@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from typing import List, Callable, Any
+from typing import List, Callable, Any, Tuple
 from typing_extensions import Self
 from inspect import signature
 
@@ -38,12 +38,17 @@ class MalKeyword(MalExpression, str):
 
 
 class MalAtom(MalExpression, object):
+    def __init__(self, val: MalExpression) -> None: self.val = val
+    def __str__(self): return '(atom ' + str(self.val) + ')'
+    def __repr__(self): return '(atom ' + repr(self.val) + ')'
+    def naive(self) -> MalExpression: return self.val
+
+
+class MalInteger(MalExpression, object):
     def __init__(self, val) -> None: self.val = val
     def __str__(self): return str(self.val)
     def naive(self) -> Any: return self.val
 
-
-class MalInteger(MalAtom):
     def __lt__(self, other: Self) -> bool:
         return type(self) == type(other) and self.naive() < other.naive()
 
@@ -57,7 +62,8 @@ class MalInteger(MalAtom):
         return type(self) == type(other) and self.naive() >= other.naive()
 
 
-class MalString(MalAtom):
+class MalString(MalExpression, object):
+    def __init__(self, val: str): self.val = val
     def __str__(self): return str(self.val)
 
     def __repr__(self):
@@ -65,6 +71,8 @@ class MalString(MalAtom):
             .replace("\\", "\\\\") \
             .replace("\n", "\\n") \
             .replace('"', '\\"') + '\"'
+
+    def naive(self) -> Any: return self.val
 
 
 def array_eq(a: List, b: List):
@@ -115,6 +123,27 @@ class MalHashmap(MalExpression, list):
 
     def __eq__(self, other: Self) -> bool:
         return array_eq(self, other)
+
+
+class MalFunction(MalExpression):
+    def __init__(
+        self,
+        func: Callable[[List[MalExpression]], Tuple[MalExpression, Any]]
+    ) -> None:
+        super().__init__()
+        self.func_ = func
+
+    def __str__(self) -> str:
+        return f'MalFunction {signature(self.func_)}'
+
+    def __repr__(self) -> str:
+        return '#<function>'
+
+    def naive(self) -> Any:
+        return self.func_
+
+    def call(self, args: List[MalExpression]) -> Tuple[MalExpression, Any]:
+        return self.func_(args)
 
 
 class MalHostFunction(MalExpression):

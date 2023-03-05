@@ -45,8 +45,9 @@ def read_form(reader: Reader) -> MalExpression:
         s = reader.peek()
         if not s:
             return MalEOF()
-        elif s == ';':
-            return MalEOF()
+        elif s.startswith(';'):
+            _ = reader.next()
+            return read_form(reader)
         elif s == '(':
             _ = reader.next()
             return read_list(reader)
@@ -110,6 +111,12 @@ def read_hashmap(reader: Reader) -> MalHashmap:
 
 
 def read_atom(reader: Reader) -> MalExpression:
+    specials = {
+        'nil': lambda _: MalNil(),
+        'true': lambda _: MalBoolean(True),
+        'false': lambda _: MalBoolean(False),
+    }
+
     s = reader.next()
     if check_int(s):
         return MalInteger(int(s))
@@ -119,6 +126,8 @@ def read_atom(reader: Reader) -> MalExpression:
         raise Exception("Unexpected bracket")
     elif s[0] == ':':
         return MalKeyword(s)
+    elif specials.get(s) is not None:
+        return specials[s](s)
     else:
         return MalSymbol(s)
 
@@ -153,6 +162,14 @@ def string_parser(s: str) -> MalString:
 
 
 if __name__ == '__main__':
-    print(tokenize(r'''
-       ; "qwq"
-    '''))
+    print(read_str(r'''
+;; Some inefficient arithmetic computations for benchmarking.
+
+;; Unfortunately not yet available in tests of steps 4 and 5.
+
+;; Compute n(n+1)/2 with a non tail-recursive call.
+(def! sumdown
+  (fn* [n]                              ; non-negative number
+    (if (= n 0)
+      0
+      (+ n (sumdown  (- n 1))))))'''))

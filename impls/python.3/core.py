@@ -2,11 +2,12 @@
 
 from mal_types import *
 import printer
+import reader
 
 
 def mal_null(name: str) -> Callable[[Any], Any]:
     def func(*args, **kwargs) -> None:
-        raise Exception(f"Symbol `{name}` not found")
+        raise Exception(f"Symbol {name} not found")
     return func
 
 
@@ -93,10 +94,43 @@ def mal_ge(args: List[MalExpression]) -> MalBoolean:
     return MalBoolean(args[0] >= args[1])
 
 
+# Here's where magic happens
+def mal_read_string(args: List[MalExpression]) -> MalExpression:
+    if not isinstance(args[0], MalString):
+        raise Exception("The first argument of read-string should be a string")
+    return reader.read_str(args[0].naive())
+
+
+def mal_slurp(args: List[MalExpression]) -> MalString:
+    if not isinstance(args[0], MalString):
+        raise Exception("The first argument of slurp should be a string")
+    with open(args[0].naive()) as f:
+        return MalString(f.read())
+
+
+# atom functions
+def mal_atom(args: List[MalExpression]) -> MalAtom:
+    return MalAtom(args[0])
+
+
+def mal_atom_q(args: List[MalExpression]) -> MalBoolean:
+    return MalBoolean(isinstance(args[0], MalAtom))
+
+
+def mal_deref(args: List[MalExpression]) -> MalExpression:
+    if not isinstance(args[0], MalAtom):
+        raise Exception("The first argument of deref should be an atom")
+    return args[0].naive()  # naive points to the value
+
+
+def mal_reset(args: List[MalExpression]) -> MalExpression:
+    if not isinstance(args[0], MalAtom):
+        raise Exception("The first argument of reset should be an atom")
+    args[0].val = args[1]
+    return args[1]
+
+
 ns = {
-    'nil':   MalNil(),
-    'true':  MalBoolean(True),
-    'false': MalBoolean(False),
     ###########################
     'prn':     MalHostFunction(mal_prn),
     'str':     MalHostFunction(mal_str),
@@ -106,6 +140,9 @@ ns = {
     'list?':   MalHostFunction(mal_list_q),
     'empty?':  MalHostFunction(mal_empty_q),
     'count':   MalHostFunction(mal_count),
+
+    'read-string': MalHostFunction(mal_read_string),
+    'slurp':       MalHostFunction(mal_slurp),
     ###########################
     '+':  MalHostFunction(mal_plus),
     '-':  MalHostFunction(mal_minus),
@@ -116,6 +153,12 @@ ns = {
     '<=': MalHostFunction(mal_le),
     '>':  MalHostFunction(mal_gt),
     '>=': MalHostFunction(mal_ge),
+    ############################
+    'atom':   MalHostFunction(mal_atom),
+    'atom?':  MalHostFunction(mal_atom_q),
+    'deref':  MalHostFunction(mal_deref),
+    'reset!': MalHostFunction(mal_reset),
+    # 'swap!': ...
     ############################
     'type': MalHostFunction(mal_type),
     'exit': MalHostFunction(mal_exit),

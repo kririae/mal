@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from mal_types import *
-from core import *
 
+import core
 from typing import Any, Optional
 from typing_extensions import Self
 
@@ -23,12 +23,16 @@ class Env:
                     break
                 self.set(s, exprs[idx])
 
-    def set(self, s: MalSymbol, v: MalExpression):
+    def __str__(self) -> str:
+        return str(self.data)
+
+    def set(self, s: MalSymbol, v: MalExpression) -> MalExpression:
         """takes a symbol key and a mal value and adds to the data structure"""
         if not isinstance(s, MalSymbol):
             raise Exception(
                 "Unmatched data type encountered in environment")
         self.data[str(s)] = v
+        return v
 
     def find(self, s: MalSymbol) -> Self:
         """Find a match environment with MalSymbol
@@ -50,13 +54,13 @@ class Env:
         """
         s = str(s)
         env = self.find(s)
-        return env.data.get(s, MalHostFunction(mal_null(name=s)))
+        return env.data.get(s, MalHostFunction(core.mal_null(name=s)))
 
 
 def get_core_env() -> Env:
     base = Env()
     # Load core.py
-    for k, v in ns.items():
+    for k, v in core.ns.items():
         base.set(MalSymbol(k), v)
     return base
 
