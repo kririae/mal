@@ -130,6 +130,21 @@ def mal_reset(args: List[MalExpression]) -> MalExpression:
     return args[1]
 
 
+def mal_cons(args: List[MalExpression]) -> MalList:
+    if not isinstance(args[1].naive(), list):
+        raise Exception("The second argument of cons should be a list")
+    head, tail = args[0], args[1]
+    return MalList([head] + args[1].naive())
+
+
+def mal_concat(args: List[MalExpression]) -> MalList:
+    return MalList([item for sublist in args for item in sublist.naive()])
+
+
+def mal_vec(args: List[MalExpression]) -> MalList:
+    return MalVector(args[0].naive())
+
+
 ns = {
     ###########################
     'prn':     MalHostFunction(mal_prn),
@@ -159,6 +174,11 @@ ns = {
     'deref':  MalHostFunction(mal_deref),
     'reset!': MalHostFunction(mal_reset),
     # 'swap!': ...
+    ############################
+    # List manipulation
+    'cons':   MalHostFunction(mal_cons),
+    'concat': MalHostFunction(mal_concat),
+    'vec':    MalHostFunction(mal_vec),
     ############################
     'type': MalHostFunction(mal_type),
     'exit': MalHostFunction(mal_exit),

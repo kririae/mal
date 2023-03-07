@@ -50,6 +50,8 @@ def main():
     _ = env.set(MalSymbol('eval'), MalHostFunction(
         lambda args: eval_(args[0], env)))
     _ = env.set(MalSymbol('swap!'), MalHostFunction(mal_swap))
+    _ = env.set(MalSymbol('*ARGV*'),
+                MalList([MalString(str(i)) for i in sys.argv[2:]]))
 
     # Load core.mal
     try:

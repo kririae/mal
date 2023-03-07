@@ -132,6 +132,7 @@ class MalFunction(MalExpression):
     ) -> None:
         super().__init__()
         self.func_ = func
+        self.is_macro: bool = False
 
     def __str__(self) -> str:
         return f'MalFunction {signature(self.func_)}'

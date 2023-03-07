@@ -6,6 +6,36 @@ import more_itertools as it
 from typing import Tuple
 
 
+def quasiquote(ast: MalExpression, enable_unquote: bool = True) -> MalExpression:
+    def start_with_symbol(ast: MalExpression, sname: str) -> bool:
+        """Helper function that performs a series of checking"""
+        lst = ast.naive()
+        return isinstance(lst, list)  \
+            and len(lst) != 0  \
+            and isinstance(lst[0], MalSymbol)  \
+            and lst[0].naive() == sname
+
+    if isinstance(ast, MalList):
+        if start_with_symbol(ast, 'unquote') and enable_unquote:
+            # if exists.. I don't want to do checking again
+            return ast.naive()[1]
+        else:
+            lst = MalList()  # populate the list
+            # Iterate over each element elt of ast in reverse order
+            for elt in ast.naive()[::-1]:
+                if start_with_symbol(elt, 'splice-unquote'):
+                    lst = MalList([MalSymbol('concat'), elt.naive()[1], lst])
+                else:
+                    lst = MalList([MalSymbol('cons'), quasiquote(elt), lst])
+            return lst
+    elif isinstance(ast, MalHashmap) or isinstance(ast, MalSymbol):
+        return MalList([MalSymbol('quote'), ast])
+    elif isinstance(ast, MalVector):
+        return MalList([MalSymbol('vec'), quasiquote(MalList(ast.naive()), False)])
+    else:
+        return ast
+
+
 def flatten(ast: MalExpression, env: Env) -> MalExpression:
     """
     Flatten the aggregate structure in Mal
@@ -27,7 +57,7 @@ def eval(ast: MalExpression, env: Env) -> MalExpression:
     Reduce any structure in Mal
     i.e. will reduce MalList into a single
 
-    TCO works with these ideas: 
+    TCO works with these ideas:
         1. eval(list) yet serves as a functionality to reduce list.
         2. If the *specials* or regular functions does not requires
            stack-based operations, use loop to perform it.
@@ -89,6 +119,13 @@ def eval(ast: MalExpression, env: Env) -> MalExpression:
                 new_env = Env(outer=env, binds=ast[1].naive(), exprs=exprs)
                 return (ast[2], new_env)
             return MalFunction(func)
+        elif str(ast[0]) == 'quote':
+            # The execution is terminated
+            return ast[1]
+        elif str(ast[0]) == 'quasiquoteexpand':
+            return quasiquote(ast[1])
+        elif str(ast[0]) == 'quasiquote':
+            ast = quasiquote(ast[1])
         else:
             eval_list = flatten(ast, env)
             head, tail = eval_list[0], eval_list[1:]
