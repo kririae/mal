@@ -126,6 +126,7 @@ def eval(ast: MalExpression, env: Env) -> MalExpression:
             return quasiquote(ast[1])
         elif str(ast[0]) == 'quasiquote':
             ast = quasiquote(ast[1])
+        # elif str(ast[0]) == 'defmacro!':
         else:
             eval_list = flatten(ast, env)
             head, tail = eval_list[0], eval_list[1:]
