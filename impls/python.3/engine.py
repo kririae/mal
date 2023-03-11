@@ -36,6 +36,25 @@ def quasiquote(ast: MalExpression, enable_unquote: bool = True) -> MalExpression
         return ast
 
 
+def macroexpand(ast: MalExpression, env: Env) -> MalExpression:
+    def is_macro_call(ast: MalExpression, env: Env) -> bool:
+        if isinstance(ast, MalList) and \
+                len(ast.naive()) > 0 and \
+                isinstance(ast.naive()[0], MalSymbol):
+            func = env.get(ast.naive()[0])
+            if isinstance(func, MalFunction):
+                return func.is_macro
+        return False
+
+    while is_macro_call(ast, env):
+        func = env.get(ast.naive()[0])
+        assert func.is_macro
+        args = ast.naive()[1:]
+        ast, env = func.call(args)  # invoke the function
+        ast = eval(ast, env)  # evaluate the function
+    return ast
+
+
 def flatten(ast: MalExpression, env: Env) -> MalExpression:
     """
     Flatten the aggregate structure in Mal
@@ -63,29 +82,41 @@ def eval(ast: MalExpression, env: Env) -> MalExpression:
            stack-based operations, use loop to perform it.
     """
     while True:
+        # Directly perform macro expansion
+        ast = macroexpand(ast, env)
+
         if not isinstance(ast, MalList):
             return flatten(ast, env)
-
         # Now that ast is a reducible MalList
         if len(ast.naive()) == 0:
             return ast
 
         # switch ast[0]
         if str(ast[0]) == 'def!':
-            # Some error checking
+            # Some error checkings
             if not isinstance(ast[1], MalSymbol):
                 raise Exception(
                     "def! should be used with MalSymbol as the first parameter")
             # env.set will return the expression
             return env.set(ast[1], eval(ast[2], env))
+        elif str(ast[0]) == 'defmacro!':
+            # Some error checkings
+            if not isinstance(ast[1], MalSymbol):
+                raise Exception(
+                    "defmacro! should be used with MalSymbol as the first parameter")
+            value = eval(ast[2], env)
+            assert isinstance(value, MalFunction)
+            value.is_macro = True
+            return env.set(ast[1], value)
+        elif str(ast[0]) == 'macroexpand':
+            return macroexpand(ast[1], env)
         elif str(ast[0]) == 'let*':
             if not (isinstance(ast[1], MalList) or
                     isinstance(ast[1], MalVector)):
                 raise Exception(
                     "let* should be used with a MalList or MalVector as bindings")
             if len(ast[1].naive()) % 2 != 0:
-                raise Exception("Invalid binding list")
-
+                raise Exception(f"Invalid binding list {str(ast[1])}")
             # Create a new environment chained below
             new_env = Env(outer=env)
             binding_list = it.batched(ast[1].naive(), 2)
@@ -126,7 +157,6 @@ def eval(ast: MalExpression, env: Env) -> MalExpression:
             return quasiquote(ast[1])
         elif str(ast[0]) == 'quasiquote':
             ast = quasiquote(ast[1])
-        # elif str(ast[0]) == 'defmacro!':
         else:
             eval_list = flatten(ast, env)
             head, tail = eval_list[0], eval_list[1:]

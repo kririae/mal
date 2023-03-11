@@ -1,0 +1,31 @@
+;; A demo borrowed from https://stackoverflow.com/questions/267862/what-makes-lisp-macros-so-special
+
+(def! range-helper (fn* (x) 
+  (if (= x 0)
+    (list x)
+    (cons x (range-helper (- x 1))))))
+
+(def! reverse (fn* (lst)
+  (if (empty? lst)
+    '() ;; empty list
+    (concat 
+      (reverse (rest lst))    ;; tail
+      (list (first lst))))))  ;; head
+
+(def! range (fn* (x)
+  (reverse (range-helper (- x 1)))))
+
+(prn (range 5))
+
+(def! loop (fn* (lst func)
+  (if (empty? lst)
+    nil ;; 
+    (do
+     (func (first lst)) 
+     (loop (rest lst) func))) ))
+
+(loop (range 3) (fn* (i) (prn i)))
+
+(defmacro! quote2 (fn* [ast]
+  (list (fn* [] ast))))
+(prn (quote2 (a b c)))

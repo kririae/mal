@@ -93,6 +93,9 @@ def mal_gt(args: List[MalExpression]) -> MalBoolean:
 def mal_ge(args: List[MalExpression]) -> MalBoolean:
     return MalBoolean(args[0] >= args[1])
 
+def mal_mod(args: List[MalExpression]) -> MalBoolean:
+    return MalInteger(args[0] % args[1])
+
 
 # Here's where magic happens
 def mal_read_string(args: List[MalExpression]) -> MalExpression:
@@ -145,6 +148,23 @@ def mal_vec(args: List[MalExpression]) -> MalList:
     return MalVector(args[0].naive())
 
 
+def mal_nth(args: List[MalExpression]) -> MalExpression:
+    assert isinstance(args[0].naive(), list)
+    return args[0].naive()[args[1].naive()]
+
+
+def mal_first(args: List[MalExpression]) -> MalExpression:
+    if (not isinstance(args[0].naive(), list)) or len(args[0].naive()) == 0:
+        return MalNil()
+    return args[0].naive()[0]
+
+
+def mal_rest(args: List[MalExpression]) -> MalExpression:
+    if (not isinstance(args[0].naive(), list)):
+        return MalList()
+    return MalList(args[0].naive()[1:])
+
+
 ns = {
     ###########################
     'prn':     MalHostFunction(mal_prn),
@@ -168,6 +188,7 @@ ns = {
     '<=': MalHostFunction(mal_le),
     '>':  MalHostFunction(mal_gt),
     '>=': MalHostFunction(mal_ge),
+    '%':  MalHostFunction(mal_mod),
     ############################
     'atom':   MalHostFunction(mal_atom),
     'atom?':  MalHostFunction(mal_atom_q),
@@ -179,6 +200,9 @@ ns = {
     'cons':   MalHostFunction(mal_cons),
     'concat': MalHostFunction(mal_concat),
     'vec':    MalHostFunction(mal_vec),
+    'nth':    MalHostFunction(mal_nth),
+    'first':  MalHostFunction(mal_first),
+    'rest':   MalHostFunction(mal_rest),
     ############################
     'type': MalHostFunction(mal_type),
     'exit': MalHostFunction(mal_exit),

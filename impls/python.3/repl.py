@@ -57,8 +57,8 @@ def main():
     try:
         with open(repl_path / Path('core.mal'), 'r') as f:
             _ = rep_('(do ' + f.read() + ')', env)
-    except:
-        pass
+    except Exception as e:
+        print(str(e))
 
     if len(sys.argv) > 1:
         rep_(f'(load-file "{sys.argv[1]}")', env)

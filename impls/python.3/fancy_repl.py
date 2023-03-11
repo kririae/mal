@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import reader
 import printer
 from env import *
@@ -10,12 +11,11 @@ from typing import List
 from pathlib import Path
 
 from prompt_toolkit import PromptSession
-from prompt_toolkit.styles import Style
 from prompt_toolkit.lexers import PygmentsLexer
-from pygments.lexers import ClojureLexer
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.key_binding import KeyBindings
+from pygments.lexers import ClojureLexer
 
 
 # Set up a Pygments lexer with the Lisp syntax style
